@@ -1,0 +1,18 @@
+{
+  "name": "veneto",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-11-16",
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS",
+    "include": ["/index.html", "/admin.html"],
+    "run_worker_first": ["/api/*", "/admin", "/admin/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "veneto-db",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+    }
+  ]
+}
