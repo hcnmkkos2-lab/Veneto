@@ -1,12 +1,14 @@
 # VENETO — menu and administration
 
-The existing storefront remains the public entry point. Start the Node.js API server to connect the menu, cart, Baghdad delivery areas, and checkout to persistent SQLite storage:
+The existing storefront layout and source file are preserved. A Node.js server injects an API bridge at runtime to connect its menu and Baghdad delivery checkout to persistent SQLite storage.
+
+## Start
+
+Node.js 20+ required. Configure `NODE_ENV`, `DATA_DIR` (persistent disk in production), `SESSION_SECRET`, `OWNER_EMAIL`, and the temporary `VENETO_SETUP_TOKEN` in the host environment. Then run:
 
 ```sh
 npm install
 npm start
 ```
 
-Configure `SESSION_SECRET`, `OWNER_EMAIL`, `VENETO_SETUP_TOKEN`, and a persistent `DATA_DIR` on a Node.js host. Setup details and security/deployment requirements are in [SECURITY-SETUP.md](SECURITY-SETUP.md). The admin dashboard is `/admin`.
-
-GitHub Pages is static hosting only and cannot run this backend or persist customer orders. Deploy the application on a Node-capable service with a persistent volume and HTTPS. The storefront bridge is injected by the server, so the existing `index.html` design file is not modified.
+Open `/` for the storefront and `/admin` for the protected administration dashboard. Read [SECURITY-SETUP.md](SECURITY-SETUP.md) before deployment. GitHub Pages alone cannot run the server or database; use a Node.js host with persistent storage and HTTPS.

@@ -1,40 +1,34 @@
 # VENETO administration backend — deployment and security setup
 
-## Current architecture
+## Architecture
 
-The repository now includes a Node.js/Express API and SQLite database. The server injects `storefront-api.js` into the existing `index.html` response at runtime; the committed storefront design file itself is not changed. The bridge loads products and Baghdad areas from the API, adds cart actions and customer checkout, and submits orders to the server. Server-side product prices and delivery fees are authoritative.
+This project now includes a Node.js/Express API, SQLite persistence, and an admin dashboard. The server injects `storefront-api.js` at response time into the existing storefront; the original `index.html` design file is preserved. The bridge loads products and Baghdad delivery zones, manages the cart and checkout, displays zone fees, and submits orders to the server. Product prices and delivery charges are recalculated server-side.
 
-SQLite holds products, Baghdad delivery zones, orders, admins, invitations, settings, and audit events. The database and session store must live on a persistent disk provided by the hosting service. GitHub Pages cannot run Node.js or save order data.
+SQLite stores admins, invitations, products, areas, orders, technical settings, audit events, and sessions. Store `DATA_DIR` on a persistent host volume. GitHub Pages cannot run this backend or persist orders.
 
-## Deployment prerequisites
+## Run and deploy
 
-Use Node.js 20+ on a host that supports a persistent volume and HTTPS. Configure these environment variables in the host's secret manager (never commit secret values):
+Requires Node.js 20+. On a Node.js host with HTTPS and a persistent disk, configure these environment secrets (never commit them):
 
 - `NODE_ENV=production`
-- `PORT` (normally provided by the platform)
-- `DATA_DIR` on a persistent mounted volume
-- `SESSION_SECRET`: random value with at least 32 characters
-- `OWNER_EMAIL`: exact first-owner email
-- `VENETO_SETUP_TOKEN`: temporary random bootstrap secret
+- `DATA_DIR` pointing to the persistent mounted volume
+- `SESSION_SECRET` (random, at least 32 characters)
+- `OWNER_EMAIL` (the primary administrator's email)
+- `VENETO_SETUP_TOKEN` (temporary, one-time bootstrap secret)
+- `PORT` if required by the provider
 
-Generate private secrets locally, for example `openssl rand -hex 32`. Do not send passwords, bootstrap secrets, or the technical PIN in chat or commit them to Git. The owner email can be provided for setup, but credentials/secrets belong only in the hosting dashboard.
+Generate secrets locally (for example `openssl rand -hex 32`). Install and start with `npm install` and `npm start`; visit `/` for the menu and `/admin` for management.
 
-Build/run commands: `npm install` then `npm start`. The process serves the menu at `/` and management at `/admin`.
+First owner setup is available only while no admin exists. The email must equal `OWNER_EMAIL`, and setup token must equal `VENETO_SETUP_TOKEN`. Choose a password of at least 12 characters. Remove the bootstrap token from the host after claiming the owner. Never send passwords, setup tokens, session secrets, or the technical PIN in chat or commit them to the repo. The owner can issue one-use, 24-hour admin invitations and set the hashed 8-digit technical PIN in the dashboard.
 
-## Initial owner and access
+## Included features
 
-On the first deployment only, `/admin` shows the owner setup form. The account email must exactly match `OWNER_EMAIL` and the one-time token must match `VENETO_SETUP_TOKEN`; set a strong password of at least 12 characters. After successfully claiming the owner account, remove `VENETO_SETUP_TOKEN` from the host configuration. The setup endpoint is permanently disabled after the first account is created.
+- Orders persisted and grouped as new, preparing, delivered, cancelled.
+- Customer contact, chosen Baghdad area, item snapshot, subtotal, delivery and total displayed for admins.
+- Current delivery defaults: Sadr City 2,000 IQD; Hay Ur 1,000 IQD; other areas unset and shown as pending, not zero.
+- Technical management for product names/prices/images/visibility and Baghdad delivery fees; changes are audit-logged.
+- Rate-limited login/PIN, bcrypt password/PIN hashes, HTTP-only session cookies, CSRF checks, and server-side validation.
 
-The owner can create a time-limited, one-use invitation for other admins. Sessions use HTTP-only, secure (production), same-site cookies and a SQLite session store; password hashes and technical PIN hashes are bcrypt-protected. Login and PIN entry are rate-limited. The owner sets the eight-digit technical PIN in the owner dashboard. It is not present in the browser or source.
+## Deployment status
 
-## Features
-
-- Orders saved server-side and visible in `/admin`, grouped as new, preparing, delivered, or cancelled.
-- Customer name, phone, selected Baghdad neighborhood, item snapshot, quantities, delivery fee, subtotal and total shown to managers.
-- Server calculates order totals from current database prices and selected zone, never from client-provided amounts.
-- Fees: Sadr City 2,000 IQD and Hay Ur 1,000 IQD. Unset fees/prices stay null and are not incorrectly treated as zero; the buyer sees that the final amount needs confirmation.
-- Technical tools manage products and Baghdad zones/fees. Deleting a product is soft-hide, retaining order history. Changes are audit-logged.
-
-## Important operational note
-
-No host or administrator email was supplied, so this repository update cannot deploy the service, create the owner account, or provide a live public preview. Do not collect real customer data until deployed behind HTTPS with secrets configured and persistent storage verified. After sharing the owner email, configure that address as `OWNER_EMAIL` in the hosting provider; do not share passwords or secret PINs here.
+Files are prepared for deployment, but the backend is not running on GitHub and no live service exists until deployed to a Node-capable provider with persistent storage. The personal admin email has not yet been provided. After sharing the email, set it as `OWNER_EMAIL` in the hosting dashboard; the bootstrap/session secrets must be generated and configured there, not in source.
