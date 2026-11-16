@@ -5,7 +5,25 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
-    "include": ["/index.html", "/admin.html", "/checkout.js"],
+    "exclude": [
+      "node_modules/**",
+      ".git/**",
+      ".github/**",
+      "migrations/**",
+      "src/**",
+      "*.json",
+      "*.md",
+      "*.yml",
+      "*.yaml",
+      "*.lock",
+      "*.toml",
+      "*.sqlite",
+      "*.db",
+      "server.js",
+      "railway.json",
+      "render.yaml",
+      ".node-version"
+    ],
     "run_worker_first": ["/api/*", "/admin", "/admin/*", "/", "/index.html"]
   },
   "d1_databases": [
