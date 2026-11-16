@@ -2,7 +2,7 @@
   "name": "veneto-menu",
   "version": "1.0.0",
   "private": true,
-  "engines": { "node": ">=20" },
+  "engines": { "node": "22.x" },
   "scripts": { "start": "node server.js" },
   "dependencies": {
     "bcryptjs": "^2.4.3",
