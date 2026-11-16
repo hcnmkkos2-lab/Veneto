@@ -1,51 +1,40 @@
 # VENETO administration backend — deployment and security setup
 
-## Repository inspection / current state
+## Current architecture
 
-The existing project was a static storefront (`index.html` and `README.md`) with browser-only cart behavior. It had no server, database, or authentication, and GitHub Pages was not enabled. A static GitHub Pages deployment cannot safely store admin credentials, verify the technical PIN, or persist customer orders.
+The repository now includes a Node.js/Express API and SQLite database. The server injects `storefront-api.js` into the existing `index.html` response at runtime; the committed storefront design file itself is not changed. The bridge loads products and Baghdad areas from the API, adds cart actions and customer checkout, and submits orders to the server. Server-side product prices and delivery fees are authoritative.
 
-This addition preserves the storefront and provides a Node.js/SQLite backend plus a separate admin dashboard. The SQLite database and session store must be placed on a persistent disk provided by the hosting platform. This repository change alone does not deploy or connect the API to the existing public storefront.
+SQLite holds products, Baghdad delivery zones, orders, admins, invitations, settings, and audit events. The database and session store must live on a persistent disk provided by the hosting service. GitHub Pages cannot run Node.js or save order data.
 
-## Run locally
+## Deployment prerequisites
 
-Requires Node.js 20+.
+Use Node.js 20+ on a host that supports a persistent volume and HTTPS. Configure these environment variables in the host's secret manager (never commit secret values):
 
-```sh
-npm install
-```
+- `NODE_ENV=production`
+- `PORT` (normally provided by the platform)
+- `DATA_DIR` on a persistent mounted volume
+- `SESSION_SECRET`: random value with at least 32 characters
+- `OWNER_EMAIL`: exact first-owner email
+- `VENETO_SETUP_TOKEN`: temporary random bootstrap secret
 
-Set environment variables in the server environment (never commit these values):
+Generate private secrets locally, for example `openssl rand -hex 32`. Do not send passwords, bootstrap secrets, or the technical PIN in chat or commit them to Git. The owner email can be provided for setup, but credentials/secrets belong only in the hosting dashboard.
 
-- `SESSION_SECRET`: random secret, at least 32 characters.
-- `OWNER_EMAIL`: exact email allowed to claim the first owner account.
-- `VENETO_SETUP_TOKEN`: one-time bootstrap secret. Generate a long random token, keep it private, and remove/rotate it after the first owner is created.
-- `DATA_DIR`: path on persistent disk for the SQLite DB and session store (default `./data`).
-- `NODE_ENV=production` and optionally `PORT`.
+Build/run commands: `npm install` then `npm start`. The process serves the menu at `/` and management at `/admin`.
 
-Example random values can be generated locally with `openssl rand -hex 32`; do not paste them into source files or commit them.
+## Initial owner and access
 
-Then start the server:
+On the first deployment only, `/admin` shows the owner setup form. The account email must exactly match `OWNER_EMAIL` and the one-time token must match `VENETO_SETUP_TOKEN`; set a strong password of at least 12 characters. After successfully claiming the owner account, remove `VENETO_SETUP_TOKEN` from the host configuration. The setup endpoint is permanently disabled after the first account is created.
 
-```sh
-npm start
-```
+The owner can create a time-limited, one-use invitation for other admins. Sessions use HTTP-only, secure (production), same-site cookies and a SQLite session store; password hashes and technical PIN hashes are bcrypt-protected. Login and PIN entry are rate-limited. The owner sets the eight-digit technical PIN in the owner dashboard. It is not present in the browser or source.
 
-Open `/admin`. The first owner is created through the setup form only when the database contains no administrators; the email must match `OWNER_EMAIL` and the one-time token must match `VENETO_SETUP_TOKEN`. Choose a strong password of at least 12 characters. After setup, remove `VENETO_SETUP_TOKEN` from the host environment. Additional admin accounts require a one-use, 24-hour invitation issued by the owner through the admin API.
+## Features
 
-The primary owner sets an eight-digit technical PIN from the dashboard. The PIN is bcrypt-hashed in the database; it is never included in browser code. Technical unlock lasts 20 minutes, is rate-limited, and technical mutations are written to `audit_log`.
+- Orders saved server-side and visible in `/admin`, grouped as new, preparing, delivered, or cancelled.
+- Customer name, phone, selected Baghdad neighborhood, item snapshot, quantities, delivery fee, subtotal and total shown to managers.
+- Server calculates order totals from current database prices and selected zone, never from client-provided amounts.
+- Fees: Sadr City 2,000 IQD and Hay Ur 1,000 IQD. Unset fees/prices stay null and are not incorrectly treated as zero; the buyer sees that the final amount needs confirmation.
+- Technical tools manage products and Baghdad zones/fees. Deleting a product is soft-hide, retaining order history. Changes are audit-logged.
 
-## API scope
+## Important operational note
 
-- Public menu and delivery-zone data: `GET /api/menu`.
-- Customer order submission: `POST /api/orders`; server validates product/zone IDs and computes totals from database prices rather than trusting browser-supplied amounts.
-- Admin sessions, first-owner setup and owner-issued invites.
-- Admin order list/status management (`new`, `preparing`, `delivered`, `cancelled`).
-- Technical product and Baghdad delivery-area management; unavailable prices/fees remain unset, not zero.
-
-Seed values preserve the existing menu names and current Baghdad area names. The example delivery fees are Sadr City 2,000 IQD and Hay Ur 1,000 IQD; other areas are deliberately unset.
-
-## Important integration/deployment limitation
-
-The current `index.html` remains untouched, as requested. Its current checkout is a browser demo and copies order details; it does not yet submit to `/api/orders`. Before real orders can appear in the dashboard, the storefront needs a small integration change to load zones/products from `/api/menu`, submit customer details and cart item IDs to `/api/orders`, and display the server-calculated fee/total. No administrator email or production host was supplied, so production login, persistent storage, order delivery, and end-to-end testing cannot be completed from the repository alone.
-
-Use a Node-capable host with persistent volumes and HTTPS (not GitHub Pages alone). Configure the secrets above there, then connect a suitable domain or reverse proxy. Never use real customer personal data against an unconfigured demo deployment.
+No host or administrator email was supplied, so this repository update cannot deploy the service, create the owner account, or provide a live public preview. Do not collect real customer data until deployed behind HTTPS with secrets configured and persistent storage verified. After sharing the owner email, configure that address as `OWNER_EMAIL` in the hosting provider; do not share passwords or secret PINs here.

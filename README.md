@@ -1,13 +1,12 @@
-# VENETO — حلويات ومعجنات فينيتو
+# VENETO — menu and administration
 
-منيو إلكتروني عربي بألوان مستوحاة من الصورة المرجعية: كريمي، بني دافئ، وذهبي. يتضمن الصفحة الرئيسية، قائمة أصناف قابلة للبحث والتصفية، وتصميماً متجاوباً للهاتف.
+The existing storefront remains the public entry point. Start the Node.js API server to connect the menu, cart, Baghdad delivery areas, and checkout to persistent SQLite storage:
 
-## نشر الموقع على GitHub Pages
+```sh
+npm install
+npm start
+```
 
-1. افتح **Settings** في المستودع.
-2. انتقل إلى **Pages**.
-3. في **Build and deployment** اختر **Deploy from a branch**.
-4. اختر الفرع `main` والمجلد `/ (root)` ثم اضغط **Save**.
-5. بعد اكتمال النشر سيظهر رابط الموقع في صفحة Pages، عادةً بصيغة `https://hcnmkkos2-lab.github.io/Veneto/`.
+Configure `SESSION_SECRET`, `OWNER_EMAIL`, `VENETO_SETUP_TOKEN`, and a persistent `DATA_DIR` on a Node.js host. Setup details and security/deployment requirements are in [SECURITY-SETUP.md](SECURITY-SETUP.md). The admin dashboard is `/admin`.
 
-الأصناف والأسعار أمثلة أولية، والأسعار موضوعة بصيغة «السعر عند الطلب» لعدم توفر قائمة الأسعار الرسمية. حدّث المنتجات والأسعار وساعات العمل ورابط الطلب قبل مشاركة المنيو مع العملاء. صورة الخلفية والخطوط تُحمّل من خدمات خارجية.
+GitHub Pages is static hosting only and cannot run this backend or persist customer orders. Deploy the application on a Node-capable service with a persistent volume and HTTPS. The storefront bridge is injected by the server, so the existing `index.html` design file is not modified.
