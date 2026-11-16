@@ -5,14 +5,15 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
-    "include": ["/index.html", "/admin.html"],
-    "run_worker_first": ["/api/*", "/admin", "/admin/*"]
+    "include": ["/index.html", "/admin.html", "/checkout.js"],
+    "run_worker_first": ["/api/*", "/admin", "/admin/*", "/", "/index.html"]
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "veneto-db",
-      "database_id": "557365ae-99db-4791-ba5b-3fb348fcaa57"
+      "database_id": "557365ae-99db-4791-ba5b-3fb348fcaa57",
+      "migrations_dir": "migrations"
     }
   ]
 }
