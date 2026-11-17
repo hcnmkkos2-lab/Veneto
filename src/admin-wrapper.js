@@ -34,16 +34,14 @@ async function sendOtp(request, env) {
   if (!ownerEmail || email !== ownerEmail) return json({ ok: true, message: 'إذا كان البريد هو بريد المدير الأساسي فسيصلك رمز التحقق.' });
 
   const missing = ['RESEND_API_KEY', 'RESEND_FROM_EMAIL', 'OTP_SECRET', 'OWNER_SETUP_TOKEN'].filter(name => !env[name]);
-  if (missing.length) return json({ error: `إعداد إرسال البريد غير مكتمل. أضف أسرار/إعدادات Cloudflare المطلوبة: ${missing.join(', ')}.` }, 503);
+  if (missing.length) return json({ error: `إعداد إرسال البريد غير مكتمل. أضف الإعدادات المطلوبة في Cloudflare: ${missing.join(', ')}.` }, 503);
 
   const key = `owner_email_otp:${await digest(email)}`;
   const previous = await env.DB.prepare('SELECT value FROM settings WHERE key = ?').bind(key).first();
   let previousState = null;
   try { previousState = previous?.value ? JSON.parse(previous.value) : null; } catch {}
   const now = Date.now();
-  if (previousState?.sentAt && now - previousState.sentAt < 60_000) {
-    return json({ error: 'انتظر دقيقة قبل طلب رمز جديد.' }, 429);
-  }
+  if (previousState?.sentAt && now - previousState.sentAt < 60_000) return json({ error: 'انتظر دقيقة قبل طلب رمز جديد.' }, 429);
 
   const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, '0');
   const expiresAt = now + 10 * 60_000;
@@ -63,7 +61,6 @@ async function sendOtp(request, env) {
     console.error('VENETO email provider returned an error', mail.status, (await mail.text()).slice(0, 500));
     return json({ error: 'تعذر إرسال البريد. تحقق من مفتاح Resend وعنوان الإرسال الموثق ثم راجع سجلات Cloudflare.' }, 502);
   }
-
   await env.DB.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP')
     .bind(key, JSON.stringify({ codeHash, expiresAt, sentAt: now, attempts: 0 })).run();
   return json({ ok: true, message: 'إذا كان البريد هو بريد المدير الأساسي فسيصلك رمز التحقق.' });
@@ -112,9 +109,7 @@ async function verifyOtp(request, env) {
 async function handleAuth(request, env) {
   const path = new URL(request.url).pathname;
   try {
-    if (path === '/api/email-auth/status' && request.method === 'GET') {
-      return json({ setupRequired: !(await ownerExists(env)) });
-    }
+    if (path === '/api/email-auth/status' && request.method === 'GET') return json({ setupRequired: !(await ownerExists(env)) });
     if (path === '/api/email-auth/send' && request.method === 'POST') return await sendOtp(request, env);
     if (path === '/api/email-auth/verify' && request.method === 'POST') return await verifyOtp(request, env);
     return null;
@@ -139,8 +134,7 @@ export default {
     if (authResponse) return authResponse;
     if (request.method === 'GET' && (path === '/admin' || path === '/admin/')) {
       const target = new URL('/admin.html', request.url);
-      const response = await worker.fetch(new Request(target, { method: 'GET', headers: request.headers }), env, ctx);
-      return addEmailAuthScript(response);
+      return addEmailAuthScript(await worker.fetch(new Request(target, { method: 'GET', headers: request.headers }), env, ctx));
     }
     if (request.method === 'GET' && path === '/admin.html') return addEmailAuthScript(await worker.fetch(request, env, ctx));
     return worker.fetch(request, env, ctx);
